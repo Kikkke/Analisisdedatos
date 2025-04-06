@@ -1,52 +1,75 @@
-import numpy as np 
+import numpy as np
 import pandas as pd
 from scipy.spatial import distance
 
-#Definimos las coordenadas de nuestro sistema de tiendas
-
-tiendas ={
-    'Tienda A': (1,1),
-    'Tienda B': (1,5),
-    'Tienda C': (7,1),
-    'Tienda D': (3,3),
-    'Tienda E': (4,8),
+#Definimos las coordenadas de nuestros puntos
+puntos = {
+    'Punto A': (2, 3),
+    'Punto B': (5, 4),
+    'Punto C': (1, 1),
+    'Punto D': (6, 7),
+    'Punto E': (3, 5),
+    'Punto F': (8, 2),
+    'Punto G': (4, 6),
+    'Punto H': (2, 1)
 }
 
-#Convertir las coordenadas en un frame para faciltar el calculo
+#convertir las coordenadas en un DataFrame para facilitar el cálculo
+df_puntos = pd.DataFrame(puntos).T
+df_puntos.columns = ['X', 'Y']
+print('Coordenadas de los puntos:')
+print(df_puntos)
 
-df_tiendas = pd.DataFrame(tiendas).T
-df_tiendas.columns = ['X', 'Y']
-print('Coordenadas de las tiendas: ')
-print(df_tiendas)
+#inicializamos los DataFrames para almacenar las distancias
+distancias_euclidiana = pd.DataFrame(index=df_puntos.index, columns=df_puntos.index)
+distancias_manhattan = pd.DataFrame(index=df_puntos.index, columns=df_puntos.index)
+distancias_chebyshev = pd.DataFrame(index=df_puntos.index, columns=df_puntos.index)
 
-#Inicializamos los dataframe de lo que vamos a obtener para el calculo de distancias 
+#calculamos las distancias entre todos los pares de puntos
+for i in df_puntos.index:
+    for j in df_puntos.index:
+        #Distancia Euclidiana (norma L2)
+        distancias_euclidiana.loc[i, j] = distance.euclidean(df_puntos.loc[i], df_puntos.loc[j])
+        #Distancia Manhattan (norma L1)
+        distancias_manhattan.loc[i, j] = distance.cityblock(df_puntos.loc[i], df_puntos.loc[j])
+        #Distancia Chebyshev (norma L∞)
+        distancias_chebyshev.loc[i, j] = distance.chebyshev(df_puntos.loc[i], df_puntos.loc[j])
 
-distancias_punto1 = pd.DataFrame(index=df_tiendas.index, columns=df_tiendas.index)
+#mostramos las matrices de distancia
+print('\nMatriz de distancias Euclidianas:')
+print(distancias_euclidiana)
 
-distancias_punto2 = pd.DataFrame(index=df_tiendas.index, columns=df_tiendas.index)
+print('\nMatriz de distancias Manhattan:')
+print(distancias_manhattan)
 
-distancias_punto3 = pd.DataFrame(index=df_tiendas.index, columns=df_tiendas.index)
+print('\nMatriz de distancias Chebyshev:')
+print(distancias_chebyshev)
 
-#Vamos a calcular las distancias 
-for i in df_tiendas.index:
-    for j in df_tiendas.index:
-        #Defino la distancia euclidiana del primer punto
-        distancias_punto1.loc[i, j] = distance.euclidean(df_tiendas.loc[i], df_tiendas.loc[j])
-        
-        distancias_punto2.loc[i, j] = distance.cityblock(df_tiendas.loc[i], df_tiendas.loc[j])
-        
-        distancias_punto3.loc[i, j] = distance.chebyshev(df_tiendas.loc[i], df_tiendas.loc[j])
-        
-        #Mostrar resultados 
-        
-        print('/n Distancia Euclidiana entre cada una de las tiendas: ')
-        
-        print(distancias_punto1)
-        
-        print('/n Distancia Manhattan entre cada una de las tiendas: ')
-        
-        print(distancias_punto2)
-        
-        print('/n Distancia Chebyshev entre cada una de las tiendas: ')
-        
-        print(distancias_punto3)
+#función para encontrar los pares más cercanos y más alejados
+def encontrar_extremos(distancias, nombre_metrica):
+    # Ignoramos la diagonal (distancias entre el mismo punto)
+    mascara = ~np.eye(len(distancias), dtype=bool)
+    valores = distancias.values[mascara]
+    
+    # Encontramos la mínima y máxima distancia
+    min_dist = np.min(valores)
+    max_dist = np.max(valores)
+    
+    # Encontramos todos los pares con esas distancias
+    pares_minimos = np.where(distancias == min_dist)
+    pares_maximos = np.where(distancias == max_dist)
+    
+    # Filtramos para evitar duplicados (A-B vs B-A)
+    pares_minimos = [(df_puntos.index[i], df_puntos.index[j]) 
+                     for i, j in zip(*pares_minimos) if i < j]
+    pares_maximos = [(df_puntos.index[i], df_puntos.index[j]) 
+                     for i, j in zip(*pares_maximos) if i < j]
+    
+    print(f'\nAnálisis para {nombre_metrica}:')
+    print(f'Distancia mínima: {min_dist:.2f} entre los pares: {pares_minimos}')
+    print(f'Distancia máxima: {max_dist:.2f} entre los pares: {pares_maximos}')
+
+#aplicamos la función a cada tipo de distancia
+encontrar_extremos(distancias_euclidiana, 'Distancia Euclidiana')
+encontrar_extremos(distancias_manhattan, 'Distancia Manhattan')
+encontrar_extremos(distancias_chebyshev, 'Distancia Chebyshev')
